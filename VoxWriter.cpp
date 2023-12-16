@@ -31,7 +31,42 @@
 #include "VoxWriter.h"
 #include <stdio.h> 
 
-//#define VERBOSE 
+//#define VERBOSE
+
+namespace
+{
+	FILE* OpenFileForWriting(const std::string& vFilePathName)
+	{
+		FILE* f = nullptr;
+#ifdef MSVC
+		auto lastError = fopen_s(&f, vFilePathName.c_str(), "wb");
+#else
+        f = fopen(vFilePathName.c_str(), "wb");
+        auto lastError = f ? 0 : errno;
+#endif
+		if (lastError != 0)
+			return nullptr;
+		return f;
+	}
+
+	void CloseFile(FILE* file)
+	{
+		fclose(file);
+	}
+
+	long GetFilePos(FILE* file, long relativeTo)
+	{
+		return ftell(file) - relativeTo;
+	}
+
+	void SetFilePos(FILE* file, const long& vPos)
+	{
+		//  SEEK_SET	Beginning of file
+		//  SEEK_CUR	Current position of the file pointer
+		//	SEEK_END	End of file
+		fseek(file, vPos, SEEK_SET);
+	}
+}
 
 namespace vox
 {
@@ -367,24 +402,9 @@ namespace vox
 	//////////////////////////////////////////////////////////////////
 
 	VoxWriter* VoxWriter::Create(const std::string& vFilePathName, const uint32_t& vLimitX,
-		const uint32_t& vLimitY, const uint32_t& vLimitZ, int32_t *vError)
+		const uint32_t& vLimitY, const uint32_t& vLimitZ)
 	{
-		VoxWriter * vox = new VoxWriter(vLimitX, vLimitY, vLimitZ);
-
-		*vError = vox->IsOk(vFilePathName);
-
-		if (*vError == 0)
-		{
-			return vox;
-		}
-		else
-		{
-			printf("Vox file creation failed, err : %s", GetErrnoMsg(*vError).c_str());
-
-			SAFE_DELETE(vox);
-		}
-
-		return vox;
+		return new VoxWriter(vLimitX, vLimitY, vLimitZ);
 	}
 
 	std::string VoxWriter::GetErrnoMsg(const int32_t& vError)
@@ -515,15 +535,6 @@ namespace vox
 
 	}
 
-    int32_t VoxWriter::IsOk(const std::string& vFilePathName)
-	{
-		if (OpenFileForWriting(vFilePathName))
-		{
-			CloseFile();
-		}
-		return lastError;
-	}
-
 	void VoxWriter::ClearVoxels()
 	{
 
@@ -557,23 +568,25 @@ namespace vox
 		MergeVoxelInCube(vX, vY, vZ, vColorIndex, cube);
 	}
 
-	void VoxWriter::SaveToFile(const std::string& vFilePathName)
+	bool VoxWriter::SaveToFile(const std::string& vFilePathName)
 	{
-		if (OpenFileForWriting(vFilePathName))
+		if (FILE* f = OpenFileForWriting(vFilePathName))
 		{
+			auto startFilePos = GetFilePos(f, 0);
+
 			int32_t zero = 0;
 			
-			fwrite(&ID_VOX, sizeof(int32_t), 1, m_File);
-			fwrite(&MV_VERSION, sizeof(int32_t), 1, m_File);
+			fwrite(&ID_VOX, sizeof(int32_t), 1, f);
+			fwrite(&MV_VERSION, sizeof(int32_t), 1, f);
 			
 			// MAIN CHUNCK
-			fwrite(&ID_MAIN, sizeof(int32_t), 1, m_File);
-			fwrite(&zero, sizeof(int32_t), 1, m_File);
+			fwrite(&ID_MAIN, sizeof(int32_t), 1, f);
+			fwrite(&zero, sizeof(int32_t), 1, f);
 
-			long numBytesMainChunkPos = GetFilePos();
-			fwrite(&zero, sizeof(int32_t), 1, m_File);
+			long numBytesMainChunkPos = GetFilePos(f, startFilePos);
+			fwrite(&zero, sizeof(int32_t), 1, f);
 
-			long headerSize = GetFilePos();
+			long headerSize = GetFilePos(f, startFilePos);
 
 			int count = (int)cubes.size();
 
@@ -592,7 +605,7 @@ namespace vox
 			{
 				VoxCube *c = &cubes[i];
 				
-				c->write(m_File);
+				c->write(f);
 				
 				nTRN trans(1);
 				trans.nodeId = ++nodeIds; //
@@ -615,14 +628,14 @@ namespace vox
 				shapes.push_back(shape);
 			}
 
-			rootTransform.write(m_File);
-			rootGroup.write(m_File);
+			rootTransform.write(f);
+			rootGroup.write(f);
 			
 			// trn & shp
 			for (int i = 0; i < count; i++)
 			{
-				shapeTransforms[i].write(m_File);
-				shapes[i].write(m_File);
+				shapeTransforms[i].write(f);
+				shapes[i].write(f);
 			}
 
 			// no layr in my cases
@@ -633,7 +646,7 @@ namespace vox
 				LAYR layr;
 				layr.nodeId = i;
 				layr.nodeAttribs.Add("_name", ct::toStr(i));
-				layr.write(m_File);
+				layr.write(f);
 			}*/
 
 			// RGBA Palette
@@ -652,52 +665,26 @@ namespace vox
 					}
 				}
 
-				palette.write(m_File);
+				palette.write(f);
 			}
 
-			const long mainChildChunkSize = GetFilePos() - headerSize;
-			SetFilePos(numBytesMainChunkPos);
+			const long mainChildChunkSize = GetFilePos(f, startFilePos) - headerSize;
+			SetFilePos(f, numBytesMainChunkPos);
 			uint32_t size = (uint32_t)mainChildChunkSize;
-			fwrite(&size, sizeof(uint32_t), 1, m_File);
-			
-			CloseFile();
+			fwrite(&size, sizeof(uint32_t), 1, f);
+
+			CloseFile(f);
+			return true;
+		}
+		else
+		{
+			return false;
 		}
 	}
 
 	uint32_t VoxWriter::GetID(const uint8_t& a, const uint8_t& b, const uint8_t& c, const uint8_t& d)
 	{
 		return (a) | (b << 8) | (c << 16) | (d << 24);
-	}
-
-	bool VoxWriter::OpenFileForWriting(const std::string& vFilePathName)
-	{
-#ifdef MSVC
-		lastError = fopen_s(&m_File, vFilePathName.c_str(), "wb");
-#else
-        m_File = fopen(vFilePathName.c_str(), "wb");
-        lastError = m_File ? 0 : errno;
-#endif
-		if (lastError != 0)
-			return false;
-		return true;
-	}
-
-	void VoxWriter::CloseFile()
-	{
-		fclose(m_File);
-	}
-
-	long VoxWriter::GetFilePos()
-	{
-		return ftell(m_File);
-	}
-
-	void VoxWriter::SetFilePos(const long& vPos)
-	{
-		//  SEEK_SET	Beginning of file
-		//  SEEK_CUR	Current position of the file pointer
-		//	SEEK_END	End of file
-		fseek(m_File, vPos, SEEK_SET);
 	}
 
 	int32_t VoxWriter::GetCubeId(const int32_t& vX, const int32_t& vY, const int32_t& vZ)
