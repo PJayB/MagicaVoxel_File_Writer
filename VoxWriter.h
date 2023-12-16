@@ -157,7 +157,7 @@ namespace ct
 			return result;
 		}
 
-		const dvec3 Size()
+		const dvec3 Size() const
 		{
 			return dvec3(upperBound - lowerBound);
 		}
@@ -200,13 +200,12 @@ namespace vox
 		
 	struct DICTstring
 	{
-		int32_t bufferSize;
 		std::string buffer;
 		
 		DICTstring();
 		
-		void write(FILE *fp);
-		size_t getSize();
+		void write(FILE *fp) const;
+		size_t getSize() const;
 	};
 
 	struct DICTitem
@@ -217,18 +216,17 @@ namespace vox
 		DICTitem();
 		DICTitem(std::string vKey, std::string vValue);
 	
-		void write(FILE *fp);
-		size_t getSize();
+		void write(FILE *fp) const;
+		size_t getSize() const;
 	};
 
 	struct DICT
 	{
-		int32_t count;
 		std::vector<DICTitem> keys;
 
 		DICT();
-		void write(FILE *fp);
-		size_t getSize();
+		void write(FILE *fp) const;
+		size_t getSize() const;
 		void Add(std::string vKey, std::string vValue);
 	};
 
@@ -244,8 +242,8 @@ namespace vox
 
 		nTRN(int32_t countFrames);
 
-		void write(FILE *fp);
-		size_t getSize();
+		void write(FILE *fp) const;
+		size_t getSize() const;
 	};
 
 	struct nGRP
@@ -257,8 +255,8 @@ namespace vox
 
 		nGRP(int32_t vCount);
 		
-		void write(FILE *fp);
-		size_t getSize();
+		void write(FILE *fp) const;
+		size_t getSize() const;
 	};
 
 	struct MODEL
@@ -268,8 +266,8 @@ namespace vox
 
 		MODEL();
 		
-		void write(FILE *fp);
-		size_t getSize();
+		void write(FILE *fp) const;
+		size_t getSize() const;
 	};
 	
 	struct nSHP
@@ -281,8 +279,8 @@ namespace vox
 
 		nSHP(int32_t vCount);
 		
-		void write(FILE *fp);
-		size_t getSize();
+		void write(FILE *fp) const;
+		size_t getSize() const;
 	};
 
 	struct LAYR
@@ -292,8 +290,8 @@ namespace vox
 		int32_t reservedId;
 
 		LAYR();
-		void write(FILE *fp);
-		size_t getSize();
+		void write(FILE *fp) const;
+		size_t getSize() const;
 	};
 
 	struct SIZE
@@ -304,18 +302,17 @@ namespace vox
 		
 		SIZE();
 		
-		void write(FILE *fp);
-		size_t getSize();
+		void write(FILE *fp) const;
+		size_t getSize() const;
 	};
 
 	struct XYZI
 	{
-		int32_t numVoxels;
 		std::vector<uint8_t> voxels;
 
 		XYZI();
-		void write(FILE *fp);
-		size_t getSize();
+		void write(FILE *fp) const;
+		size_t getSize() const;
 	};
 
 	struct RGBA
@@ -323,8 +320,8 @@ namespace vox
 		int32_t colors[256];
 
 		RGBA();
-		void write(FILE *fp);
-		size_t getSize();
+		void write(FILE *fp) const;
+		size_t getSize() const;
 	};
 
 	struct VoxCube
@@ -343,7 +340,7 @@ namespace vox
 
 		VoxCube();
 
-		void write(FILE *fp);
+		void write(FILE *fp) const;
 	};
 
 	class VoxWriter
@@ -377,12 +374,12 @@ namespace vox
 		void ClearColors();
 		void AddColor(const uint8_t& r, const uint8_t& g, const uint8_t& b, const uint8_t& a, const uint8_t& index);
 		void AddVoxel(const int32_t& vX, const int32_t& vY, const int32_t& vZ, const uint8_t& vColorIndex);
-		bool SaveToFile(const std::string& vFilePathName);
+		bool SaveToFile(const std::string& vFilePathName) const;
 
 		static bool SaveToFile(const VoxWriter* writers, size_t count);
 
 	private:
-		void SaveToFile(FILE* file) const;
+		bool SaveToFile(FILE* file) const;
 
 		uint32_t GetID(const uint8_t& a, const uint8_t& b, const uint8_t& c, const uint8_t& d);
 		int32_t GetCubeId(const int32_t& vX, const int32_t& vY, const int32_t& vZ);
