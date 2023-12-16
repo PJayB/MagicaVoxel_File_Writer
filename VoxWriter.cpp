@@ -544,9 +544,9 @@ namespace vox
 	void VoxWriter::AddVoxel(const int32_t& vX, const int32_t& vY, const int32_t& vZ, const uint8_t& vColorIndex)
 	{
 		// cube pos
-		int32_t ox = (int32_t)std::floor((double)vX / (double)m_MaxVoxelPerCubeX);
-		int32_t oy = (int32_t)std::floor((double)vY / (double)m_MaxVoxelPerCubeY);
-		int32_t oz = (int32_t)std::floor((double)vZ / (double)m_MaxVoxelPerCubeZ);
+		int32_t ox = (int32_t)std::floor((double)vX / (double)m_MaxVoxelPerCubeX + 0.5f);
+		int32_t oy = (int32_t)std::floor((double)vY / (double)m_MaxVoxelPerCubeY + 0.5f);
+		int32_t oz = (int32_t)std::floor((double)vZ / (double)m_MaxVoxelPerCubeZ + 0.5f);
 		
 		minCubeX = ct::mini<int32_t>(minCubeX, vX);
 		minCubeY = ct::mini<int32_t>(minCubeY, vY);
