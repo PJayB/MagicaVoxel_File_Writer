@@ -29,7 +29,8 @@
 // it support just my needs for the moment, but i put here because its a basis for more i thinck
 
 #include "VoxWriter.h"
-#include <stdio.h> 
+#include <stdio.h>
+#include <cassert>
 
 //#define VERBOSE 
 
@@ -351,9 +352,10 @@ namespace vox
 	VoxCube::VoxCube()
 	{
 		id = 0;
-		tx = 0;
-		ty = 0;
-		tz = 0;
+
+		tx = std::numeric_limits<int>::max();
+		ty = std::numeric_limits<int>::max();
+		tz = std::numeric_limits<int>::max();
 	}
 
 	void VoxCube::write(FILE *fp) const
@@ -546,9 +548,9 @@ namespace vox
 		int32_t oy = (int32_t)std::floor((double)vY / (double)m_MaxVoxelPerCubeY);
 		int32_t oz = (int32_t)std::floor((double)vZ / (double)m_MaxVoxelPerCubeZ);
 		
-		minCubeX = ct::mini<int32_t>(minCubeX, ox);
-		minCubeY = ct::mini<int32_t>(minCubeX, oy);
-		minCubeZ = ct::mini<int32_t>(minCubeX, oz);
+		minCubeX = ct::mini<int32_t>(minCubeX, vX);
+		minCubeY = ct::mini<int32_t>(minCubeY, vY);
+		minCubeZ = ct::mini<int32_t>(minCubeZ, vZ);
 
 		auto cube = GetCube(ox, oy, oz);
 
@@ -589,6 +591,10 @@ namespace vox
 			for (int i = 0; i < count; i++)
 			{
 				const VoxCube *c = &cubes[i];
+
+				assert(c->size.sizex <= m_MaxVoxelPerCubeX);
+				assert(c->size.sizey <= m_MaxVoxelPerCubeY);
+				assert(c->size.sizez <= m_MaxVoxelPerCubeZ);
 				
 				c->write(m_File);
 				
@@ -598,9 +604,9 @@ namespace vox
 				trans.childNodeId = ++nodeIds;
 				trans.layerId = 0;
 				
-				auto ctx = (int)std::floor((c->tx - minCubeX + 0.5f) * m_MaxVoxelPerCubeX - maxVolume.lowerBound.x - maxVolume.Size().x * 0.5);
-				auto cty = (int)std::floor((c->ty - minCubeY + 0.5f) * m_MaxVoxelPerCubeY - maxVolume.lowerBound.y - maxVolume.Size().y * 0.5);
-				auto ctz = (int)std::floor((c->tz - minCubeZ + 0.5f) * m_MaxVoxelPerCubeZ);
+				auto ctx = (int)std::floor((c->tx + 0.5f * c->size.sizex) - maxVolume.lowerBound.x - maxVolume.Size().x * 0.5);
+				auto cty = (int)std::floor((c->ty + 0.5f * c->size.sizey) - maxVolume.lowerBound.y - maxVolume.Size().y * 0.5);
+				auto ctz = (int)std::floor((c->tz + 0.5f * c->size.sizez));
 				
 				// not an animation in my case so only first frame frames[0]
 				trans.frames[0].Add("_t", ct::toStr(ctx) + " " + ct::toStr(cty) + " " + ct::toStr(ctz));
@@ -722,17 +728,6 @@ namespace vox
 		return cubesId[vX][vY][vZ];
 	}
 
-	// Wrap a position inside a particular cube dimension
-	inline uint8_t Wrap(int v, int lim)
-	{
-		v = v % lim;
-		if (v < 0)
-		{
-			v += lim;
-		}
-		return (uint8_t)v;
-	}
-
 	void VoxWriter::MergeVoxelInCube(const int32_t& vX, const int32_t& vY, const int32_t& vZ, const uint8_t& vColorIndex, VoxCube *vCube)
 	{
 		maxVolume.Combine(ct::dvec3((double)vX, (double)vY, (double)vZ));
@@ -752,9 +747,31 @@ namespace vox
 
 		if (exist == false)
 		{
-			vCube->xyzi.voxels.push_back(Wrap(vX, m_MaxVoxelPerCubeX)); // x
-			vCube->xyzi.voxels.push_back(Wrap(vY, m_MaxVoxelPerCubeY)); // y
-			vCube->xyzi.voxels.push_back(Wrap(vZ, m_MaxVoxelPerCubeZ)); // z
+			vCube->tx = std::min(vCube->tx, vX);
+			vCube->ty = std::min(vCube->ty, vY);
+			vCube->tz = std::min(vCube->tz, vZ);
+
+			// Get relative position
+			auto rX = vX - vCube->tx;
+			auto rY = vY - vCube->ty;
+			auto rZ = vZ - vCube->tz;
+
+			assert(rX >= 0);
+			assert(rY >= 0);
+			assert(rZ >= 0);
+
+			// Grow the bounding box
+			vCube->size.sizex = std::max(vCube->size.sizex, rX + 1);
+			vCube->size.sizey = std::max(vCube->size.sizey, rY + 1);
+			vCube->size.sizez = std::max(vCube->size.sizez, rZ + 1);
+
+			assert(vCube->size.sizex <= m_MaxVoxelPerCubeX);
+			assert(vCube->size.sizey <= m_MaxVoxelPerCubeY);
+			assert(vCube->size.sizez <= m_MaxVoxelPerCubeZ);
+
+			vCube->xyzi.voxels.push_back(rX); // x
+			vCube->xyzi.voxels.push_back(rY); // y
+			vCube->xyzi.voxels.push_back(rZ); // z
 
 			// correspond a la loc de la couleur du voxel en question
 			voxelId[vX][vY][vZ] = (int)vCube->xyzi.voxels.size();
@@ -773,13 +790,9 @@ namespace vox
 
 			c.id = id;
 
-			c.tx = vX;
-			c.ty = vY;
-			c.tz = vZ;
-
-			c.size.sizex = m_MaxVoxelPerCubeX + 1;
-			c.size.sizey = m_MaxVoxelPerCubeY + 1;
-			c.size.sizez = m_MaxVoxelPerCubeZ + 1;
+			c.size.sizex = 0;
+			c.size.sizey = 0;
+			c.size.sizez = 0;
 
 			cubes.push_back(c);
 		}

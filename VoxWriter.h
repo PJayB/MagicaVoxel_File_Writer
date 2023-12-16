@@ -45,8 +45,8 @@ namespace ct
 		os << DOUBLE;
 		return os.str();
 	}
-	template <typename T> inline T mini(const T& a, T& b) { return a < b ? a : b; }
-	template <typename T> inline T maxi(const T& a, T& b) { return a > b ? a : b; }
+	template <typename T> inline T mini(const T& a, const T& b) { return a < b ? a : b; }
+	template <typename T> inline T maxi(const T& a, const T& b) { return a > b ? a : b; }
 	template <typename T> inline T clamp(const T& n) { return n >= T(0) && n <= T(1) ? n : T(n > T(0)); } // clamp n => 0 to 1
 	template <typename T> inline T clamp(const T&  n, const T&  b) { return n >= T(0) && n <= b ? n : T(n > T(0))*b; } // clamp n => 0 to b
 	template <typename T> inline T clamp(const T&  n, const T&  a, const T& b) { return n >= a && n <= b ? n : n < a ? a : b; } // clamp n => a to b
