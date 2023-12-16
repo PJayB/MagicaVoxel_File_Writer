@@ -37,19 +37,18 @@ namespace vox
 {
 	DICTstring::DICTstring()
 	{
-		bufferSize = 0;
 	}
 	
-	void DICTstring::write(FILE *fp)
+	void DICTstring::write(FILE *fp) const
 	{
-		bufferSize = (int32_t)buffer.size();
+		auto bufferSize = (int32_t)buffer.size();
 		fwrite(&bufferSize, sizeof(int32_t), 1, fp);
 		fwrite(buffer.data(), sizeof(char), bufferSize, fp);	
 	}
 		
-	size_t DICTstring::getSize()
+	size_t DICTstring::getSize() const
 	{
-		bufferSize = (int32_t)buffer.size();
+		auto bufferSize = (int32_t)buffer.size();
 		return sizeof(int32_t) + sizeof(char) * bufferSize;
 	}
 		
@@ -66,13 +65,13 @@ namespace vox
 		value.buffer = vValue;
 	}
 
-	void DICTitem::write(FILE *fp)
+	void DICTitem::write(FILE *fp) const
 	{
 		key.write(fp);
 		value.write(fp);	
 	}
 		
-	size_t DICTitem::getSize()
+	size_t DICTitem::getSize() const
 	{
 		return key.getSize() + value.getSize();
 	}
@@ -81,20 +80,19 @@ namespace vox
 	
 	DICT::DICT()
 	{
-		count = 0;
 	}
 
-	void DICT::write(FILE *fp)
+	void DICT::write(FILE *fp) const
 	{
-		count = (int32_t)keys.size();
+		auto count = (int32_t)keys.size();
 		fwrite(&count, sizeof(int32_t), 1, fp);
 		for (int i=0;i<count;i++)
 			keys[i].write(fp);
 	}
 		
-	size_t DICT::getSize()
+	size_t DICT::getSize() const
 	{
-		count = (int32_t)keys.size();
+		auto count = (int32_t)keys.size();
 		size_t s = sizeof(int32_t);
 		for (int i=0;i<count;i++)
 			s += keys[i].getSize();
@@ -120,7 +118,7 @@ namespace vox
 			frames.push_back(DICT());
 	}
 
-	void nTRN::write(FILE *fp)
+	void nTRN::write(FILE *fp) const
 	{
 		// chunk header
 		int32_t id = GetMVID('n', 'T', 'R', 'N');
@@ -141,7 +139,7 @@ namespace vox
 			frames[i].write(fp);
 	}
 
-	size_t nTRN::getSize()
+	size_t nTRN::getSize() const
 	{
 		size_t s = sizeof(int32_t) * 5 + nodeAttribs.getSize();
 		for (int i = 0; i < numFrames; i++)
@@ -159,7 +157,7 @@ namespace vox
 			childNodes.push_back(0);
 	}
 
-	void nGRP::write(FILE *fp)
+	void nGRP::write(FILE *fp) const
 	{
 		// chunk header
 		int32_t id = GetMVID('n', 'G', 'R', 'P');
@@ -176,7 +174,7 @@ namespace vox
 		fwrite(childNodes.data(), sizeof(int32_t), nodeChildrenNodes, fp);
 	}
 
-	size_t nGRP::getSize()
+	size_t nGRP::getSize() const
 	{
 		return sizeof(int32_t) * (2 + nodeChildrenNodes) + nodeAttribs.getSize();
 	}
@@ -188,13 +186,13 @@ namespace vox
 		modelId = 0;
 	}
 	
-	void MODEL::write(FILE *fp)
+	void MODEL::write(FILE *fp) const
 	{
 		fwrite(&modelId, sizeof(int32_t), 1, fp);
 		modelAttribs.write(fp);
 	}
 
-	size_t MODEL::getSize()
+	size_t MODEL::getSize() const
 	{
 		return sizeof(int32_t) + modelAttribs.getSize();
 	}
@@ -209,7 +207,7 @@ namespace vox
 			models.push_back(MODEL());
 	}
 	
-	void nSHP::write(FILE *fp)
+	void nSHP::write(FILE *fp) const
 	{
 		// chunk header
 		int32_t id = GetMVID('n', 'S', 'H', 'P');
@@ -227,7 +225,7 @@ namespace vox
 			models[i].write(fp);
 	}
 
-	size_t nSHP::getSize()
+	size_t nSHP::getSize() const
 	{
 		size_t s = sizeof(int32_t) * 2 + nodeAttribs.getSize();
 		for (int i = 0; i < numModels; i++)
@@ -243,7 +241,7 @@ namespace vox
 		reservedId = -1;
 	}
 
-	void LAYR::write(FILE *fp)
+	void LAYR::write(FILE *fp) const
 	{
 		// chunk header
 		int32_t id = GetMVID('L', 'A', 'Y', 'R');
@@ -259,7 +257,7 @@ namespace vox
 		fwrite(&reservedId, sizeof(int32_t), 1, fp);
 	}
 
-	size_t LAYR::getSize()
+	size_t LAYR::getSize() const
 	{
 		return sizeof(int32_t) * 2 + nodeAttribs.getSize();
 	}
@@ -273,7 +271,7 @@ namespace vox
 		sizez = 0;
 	}
 	
-	void SIZE::write(FILE *fp)
+	void SIZE::write(FILE *fp) const
 	{
 		// chunk header
 		int32_t id = GetMVID('S', 'I', 'Z', 'E');
@@ -289,7 +287,7 @@ namespace vox
 		fwrite(&sizez, sizeof(int32_t), 1, fp);
 	}
 
-	size_t SIZE::getSize()
+	size_t SIZE::getSize() const
 	{
 		return sizeof(int32_t) * 3;
 	}
@@ -298,10 +296,9 @@ namespace vox
 
 	XYZI::XYZI()
 	{
-		numVoxels = 0;
 	}
 
-	void XYZI::write(FILE *fp)
+	void XYZI::write(FILE *fp) const
 	{
 		// chunk header
 		int32_t id = GetMVID('X', 'Y', 'Z', 'I');
@@ -312,13 +309,14 @@ namespace vox
 		fwrite(&childSize, sizeof(int32_t), 1, fp);
 
 		// datas's
+		auto numVoxels = (int32_t)voxels.size() / 4;
 		fwrite(&numVoxels, sizeof(int32_t), 1, fp);
 		fwrite(voxels.data(), sizeof(uint8_t), voxels.size(), fp);
 	}
 
-	size_t XYZI::getSize()
+	size_t XYZI::getSize() const
 	{
-		numVoxels = (int32_t)voxels.size() / 4;
+		auto numVoxels = (int32_t)voxels.size() / 4;
 		return sizeof(int32_t) * (1 + numVoxels);
 	}
 
@@ -329,7 +327,7 @@ namespace vox
 		
 	}
 
-	void RGBA::write(FILE *fp)
+	void RGBA::write(FILE *fp) const
 	{
 		// chunk header
 		int32_t id = GetMVID('R', 'G', 'B', 'A');
@@ -343,7 +341,7 @@ namespace vox
 		fwrite(colors, sizeof(uint8_t), contentSize, fp);
 	}
 
-	size_t RGBA::getSize()
+	size_t RGBA::getSize() const
 	{
 		return sizeof(uint8_t) * 4 * 256;
 	}
@@ -358,7 +356,7 @@ namespace vox
 		tz = 0;
 	}
 
-	void VoxCube::write(FILE *fp)
+	void VoxCube::write(FILE *fp) const
 	{
 		size.write(fp);
 		xyzi.write(fp);
@@ -590,7 +588,7 @@ namespace vox
 			std::vector<nTRN> shapeTransforms;
 			for (int i = 0; i < count; i++)
 			{
-				VoxCube *c = &cubes[i];
+				const VoxCube *c = &cubes[i];
 				
 				c->write(m_File);
 				
@@ -600,12 +598,12 @@ namespace vox
 				trans.childNodeId = ++nodeIds;
 				trans.layerId = 0;
 				
-				c->tx = (int)std::floor((c->tx - minCubeX + 0.5f) * m_MaxVoxelPerCubeX - maxVolume.lowerBound.x - maxVolume.Size().x * 0.5);
-				c->ty = (int)std::floor((c->ty - minCubeY + 0.5f) * m_MaxVoxelPerCubeY - maxVolume.lowerBound.y - maxVolume.Size().y * 0.5);
-				c->tz = (int)std::floor((c->tz - minCubeZ + 0.5f) * m_MaxVoxelPerCubeZ);
+				auto ctx = (int)std::floor((c->tx - minCubeX + 0.5f) * m_MaxVoxelPerCubeX - maxVolume.lowerBound.x - maxVolume.Size().x * 0.5);
+				auto cty = (int)std::floor((c->ty - minCubeY + 0.5f) * m_MaxVoxelPerCubeY - maxVolume.lowerBound.y - maxVolume.Size().y * 0.5);
+				auto ctz = (int)std::floor((c->tz - minCubeZ + 0.5f) * m_MaxVoxelPerCubeZ);
 				
 				// not an animation in my case so only first frame frames[0]
-				trans.frames[0].Add("_t", ct::toStr(c->tx) + " " + ct::toStr(c->ty) + " " + ct::toStr(c->tz));
+				trans.frames[0].Add("_t", ct::toStr(ctx) + " " + ct::toStr(cty) + " " + ct::toStr(ctz));
 				
 				shapeTransforms.push_back(trans);
 
@@ -662,6 +660,12 @@ namespace vox
 			
 			CloseFile();
 		}
+	}
+
+	void VoxWriter::PushObject()
+	{
+		cubesId.clear();
+		voxelId.clear();
 	}
 
 	uint32_t VoxWriter::GetID(const uint8_t& a, const uint8_t& b, const uint8_t& c, const uint8_t& d)
